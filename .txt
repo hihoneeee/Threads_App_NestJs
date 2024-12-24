@@ -1,0 +1,3 @@
+npm run migration:generate --name=CreateUsersTable
+npm run migration:run
+npm run schema:drop
