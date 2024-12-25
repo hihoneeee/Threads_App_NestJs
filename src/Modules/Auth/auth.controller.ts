@@ -1,6 +1,16 @@
-import { Controller, Post, Body, Inject, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Inject,
+  HttpStatus,
+  HttpException,
+  Res,
+} from '@nestjs/common';
 import { AuthRegisterDTO } from './DTOs/auth-register.dto';
 import { IAuthService } from 'src/Modules/Auth/Interfaces/i.auth.service';
+import { AuthLoginDTO } from 'src/Modules/Auth/DTOs/auth-login.dto';
+import { Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -12,18 +22,39 @@ export class AuthController {
   async register(@Body() authRegisterDTO: AuthRegisterDTO) {
     const serviceResponse = await this.authService.register(authRegisterDTO);
 
-    if (serviceResponse.success) {
+    if (serviceResponse.statusCode == HttpStatus.OK) {
       return {
         success: serviceResponse.success,
         message: serviceResponse.message,
-        data: serviceResponse.data,
+      };
+    } else {
+      throw new HttpException(
+        {
+          success: false,
+          message: serviceResponse.message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  @Post('login')
+  async login(@Body() authLoginDTO: AuthLoginDTO, @Res() res: Response) {
+    const serviceResponse = await this.authService.login(authLoginDTO, res);
+
+    if (serviceResponse.statusCode == HttpStatus.OK) {
+      return {
+        success: serviceResponse.success,
+        message: serviceResponse.message,
       };
     } else {
-      return {
-        statusCode: HttpStatus.BAD_REQUEST,
-        success: serviceResponse.success,
-        message: serviceResponse.message,
-      };
+      throw new HttpException(
+        {
+          success: false,
+          message: serviceResponse.message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 }
