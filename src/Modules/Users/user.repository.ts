@@ -1,17 +1,25 @@
-import { EntityRepository, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { UserEntity } from 'src/Database/Entities/user.entity';
 import { IUserRepository } from 'src/Modules/Users/Interfaces/i.user.repository';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 
-@EntityRepository(UserEntity)
-export class UserRepository
-  extends Repository<UserEntity>
-  implements IUserRepository
-{
+@Injectable()
+export class UserRepository implements IUserRepository {
+  constructor(
+    @InjectRepository(UserEntity)
+    private readonly repository: Repository<UserEntity>,
+  ) {}
+
   async getByEmail(email: string): Promise<UserEntity | null> {
-    return await this.findOne({ where: { email } });
+    const user = await this.repository.findOne({
+      where: { email },
+      relations: ['role'],
+    });
+    return user;
   }
 
   async createUser(user: UserEntity): Promise<UserEntity> {
-    return await this.save(user);
+    return await this.repository.save(user);
   }
 }
