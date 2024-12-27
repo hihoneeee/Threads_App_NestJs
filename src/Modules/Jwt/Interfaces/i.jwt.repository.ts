@@ -9,4 +9,5 @@ export interface IJwtRepository {
       Pick<JwtEntity, 'value' | 'issue_date' | 'expired_date'>
     >,
   ): Promise<JwtEntity>;
+  getJwtById(id: number): Promise<JwtEntity | null>;
 }

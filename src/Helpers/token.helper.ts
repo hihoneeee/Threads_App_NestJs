@@ -17,28 +17,37 @@ export class JwtTokenHelper {
     };
 
     return this.jwtService.sign(claims, {
-      // Use this.jwtService instead of JwtService
       secret: process.env.JWT_SECRET,
-      expiresIn: expire.getTime() - Date.now(),
+      expiresIn: Math.floor((expire.getTime() - Date.now()) / 1000),
       algorithm: 'HS256',
     });
   }
 
-  async generateJwtRefreshToken(
-    id: number,
-    role: string,
-    expire: Date,
-  ): Promise<string> {
-    const claims = {
-      sub: id,
-      role: role,
-      iat: Math.floor(Date.now() / 1000),
-    };
+  isTokenValid(token: string): boolean {
+    try {
+      console.log('Token cần kiểm tra:', token);
+      this.jwtService.verify(token, { secret: process.env.JWT_SECRET });
+      return true;
+    } catch (error) {
+      console.error('Lỗi khi kiểm tra token:', error.message);
+      return false;
+    }
+  }
 
-    return this.jwtService.sign(claims, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: expire.getTime() - Date.now(),
-      algorithm: 'HS256',
-    });
+  getTokenPayload(token: string): { sub: number; role: string } {
+    try {
+      const actualToken = token.replace('Bearer ', '');
+      const decodedToken = this.jwtService.verify(actualToken, {
+        secret: process.env.JWT_SECRET,
+      });
+
+      return {
+        sub: decodedToken?.sub ? Number(decodedToken.sub) : 0,
+        role: decodedToken?.role || '',
+      };
+    } catch (error) {
+      console.error('Error decoding token:', error.message);
+      return { sub: 0, role: '' };
+    }
   }
 }

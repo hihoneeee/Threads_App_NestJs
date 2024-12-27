@@ -29,13 +29,31 @@ export class JwtService implements IJwtService {
         await this.iJwtRepository.updateJwtToken(existingJwt.id, updateData);
       } else {
         const newJwt = plainToInstance(JwtEntity, jwtDTO);
-
         if (newJwt != null) {
           await this.iJwtRepository.insertJWTToken(newJwt);
         } else {
           throw new Error('Unable to map jwtDTO to JWT.');
         }
       }
+    } catch (error) {
+      ServiceResponseExtensions.setError(response, error.message);
+    }
+    return response;
+  }
+
+  async getJwtByUserId(userId: number): Promise<ServiceResponse<any>> {
+    const response = new ServiceResponse<any>();
+    try {
+      const jwt = await this.iJwtRepository.getJwtByUserId(userId);
+      if (jwt == null) {
+        ServiceResponseExtensions.setExisting(response, 'Jwt');
+        return response;
+      }
+      response.data = jwt;
+      ServiceResponseExtensions.setSuccess(
+        response,
+        'Lấy thông tin thành công!',
+      );
     } catch (error) {
       ServiceResponseExtensions.setError(response, error.message);
     }

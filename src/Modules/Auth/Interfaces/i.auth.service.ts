@@ -9,4 +9,8 @@ export interface IAuthService {
     authLoginDTO: AuthLoginDTO,
     res: Response,
   ): Promise<ServiceResponse<any>>;
+  refreshToken(
+    refreshToken: string,
+    res: Response,
+  ): Promise<ServiceResponse<any>>;
 }

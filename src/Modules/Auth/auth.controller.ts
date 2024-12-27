@@ -42,19 +42,33 @@ export class AuthController {
   async login(@Body() authLoginDTO: AuthLoginDTO, @Res() res: Response) {
     const serviceResponse = await this.authService.login(authLoginDTO, res);
 
-    if (serviceResponse.statusCode == HttpStatus.OK) {
-      return {
+    if (serviceResponse.statusCode === HttpStatus.OK) {
+      return res.status(HttpStatus.OK).json({
         success: serviceResponse.success,
         message: serviceResponse.message,
-      };
+      });
     } else {
-      throw new HttpException(
-        {
-          success: false,
-          message: serviceResponse.message,
-        },
-        HttpStatus.BAD_REQUEST,
-      );
+      return res.status(serviceResponse.statusCode).json({
+        success: false,
+        message: serviceResponse.message,
+      });
+    }
+  }
+
+  @Post('refresh-token')
+  async refreshToken(@Body() token: string, @Res() res: any) {
+    const serviceResponse = await this.authService.refreshToken(token, res);
+
+    if (serviceResponse.statusCode === HttpStatus.OK) {
+      return res.status(HttpStatus.OK).json({
+        success: serviceResponse.success,
+        message: serviceResponse.message,
+      });
+    } else {
+      return res.status(serviceResponse.statusCode).json({
+        success: false,
+        message: serviceResponse.message,
+      });
     }
   }
 }

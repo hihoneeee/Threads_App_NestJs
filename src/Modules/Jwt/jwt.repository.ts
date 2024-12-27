@@ -12,7 +12,10 @@ export class JwtRepository implements IJwtRepository {
   ) {}
 
   async insertJWTToken(jwt: JwtEntity): Promise<JwtEntity> {
-    return await this.repository.save(jwt);
+    return await this.repository.save({
+      ...jwt,
+      user: { id: jwt.userId },
+    });
   }
 
   async getJwtByUserId(id: number): Promise<JwtEntity | null> {
@@ -21,6 +24,14 @@ export class JwtRepository implements IJwtRepository {
     });
     return jwt;
   }
+
+  async getJwtById(id: number): Promise<JwtEntity | null> {
+    const jwt = await this.repository.findOne({
+      where: { id },
+    });
+    return jwt;
+  }
+
   async updateJwtToken(
     id: number,
     updateData: Partial<

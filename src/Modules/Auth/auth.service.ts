@@ -38,7 +38,6 @@ export class AuthService implements IAuthService {
         ServiceResponseExtensions.setExisting(response, 'Email');
         return response;
       }
-
       const newUser = plainToInstance(UserEntity, authRegisterDTO);
       newUser.password = await bcrypt.hash(authRegisterDTO.password, 10);
       await this.iUserRepository.createUser(newUser);
@@ -59,57 +58,112 @@ export class AuthService implements IAuthService {
     @Res({ passthrough: true }) res: Response,
   ): Promise<ServiceResponse<any>> {
     const response = new ServiceResponse<any>();
-    const existingUser = await this.iUserRepository.getByEmail(
-      authLoginDTO.email,
-    );
-
-    if (!existingUser) {
-      ServiceResponseExtensions.setNotFound(response, 'Email');
-      return response;
-    }
-
-    const isPasswordValid = await bcrypt.compare(
-      authLoginDTO.password,
-      existingUser.password,
-    );
-
-    if (!isPasswordValid) {
-      ServiceResponseExtensions.setUnauthorized(
-        response,
-        'Mật khẩu không chính xác!',
+    try {
+      const existingUser = await this.iUserRepository.getByEmail(
+        authLoginDTO.email,
       );
-      return response;
+
+      if (!existingUser) {
+        ServiceResponseExtensions.setNotFound(response, 'Email');
+        return response;
+      }
+
+      const isPasswordValid = await bcrypt.compare(
+        authLoginDTO.password,
+        existingUser.password,
+      );
+
+      if (!isPasswordValid) {
+        ServiceResponseExtensions.setUnauthorized(
+          response,
+          'Mật khẩu không chính xác!',
+        );
+        return response;
+      }
+      const role = await this.iRoleRepository.getRoleById(existingUser.role.id);
+      const accessExpire = 60 * 60 * 1000;
+      const refreshExpire = 7 * 24 * 60 * 60 * 1000;
+      const accessToken = await this.jwtTokenHelper.generateJwtToken(
+        existingUser.id,
+        role.value,
+        new Date(Date.now() + accessExpire),
+      );
+      const refreshToken = await this.jwtTokenHelper.generateJwtToken(
+        existingUser.id,
+        role.value,
+        new Date(Date.now() + refreshExpire),
+      );
+
+      const jwtDto: JwtDTO = {
+        userId: existingUser.id,
+        value: refreshToken,
+        issue_date: new Date(),
+        expired_date: new Date(Date.now() + refreshExpire),
+      };
+
+      await this.iJwtService.insertJWTToken(jwtDto);
+      res.cookie('threads_access_token', accessToken, {
+        httpOnly: true,
+        maxAge: accessExpire,
+      });
+      res.cookie('threads_refresh_token', refreshToken, {
+        httpOnly: true,
+        maxAge: refreshExpire,
+      });
+      ServiceResponseExtensions.setSuccess(response, 'Đăng nhập thành công!');
+    } catch (error) {
+      ServiceResponseExtensions.setError(response, error.message);
     }
+    return response;
+  }
 
-    const role = await this.iRoleRepository.getRoleById(existingUser.role.id);
-    const refreshTokenExpiry = new Date(Date.now() + 604800000);
-    const accessToken = await this.jwtTokenHelper.generateJwtToken(
-      existingUser.id,
-      role.value,
-      new Date(Date.now() + 3600000),
-    );
-    const refreshToken = await this.jwtTokenHelper.generateJwtRefreshToken(
-      existingUser.id,
-      role.value,
-      refreshTokenExpiry,
-    );
+  async refreshToken(
+    refreshToken: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ServiceResponse<any>> {
+    const response = new ServiceResponse();
+    try {
+      const checkTokenValid =
+        await this.jwtTokenHelper.isTokenValid(refreshToken);
+      if (checkTokenValid == false) {
+        ServiceResponseExtensions.setUnauthorized(
+          response,
+          'Token không hợp lệ!',
+        );
+        return response;
+      }
 
-    const jwtDto: JwtDTO = {
-      userId: existingUser.id,
-      value: refreshToken,
-      issue_date: new Date(),
-      expired_date: new Date(Date.now() + 604800000),
-    };
+      const getUserIdFromToken =
+        this.jwtTokenHelper.getTokenPayload(refreshToken);
 
-    await this.iJwtService.insertJWTToken(jwtDto);
+      const getJwtById = await this.iJwtService.getJwtByUserId(
+        getUserIdFromToken.sub,
+      );
 
-    res.cookie('refresh_token', refreshToken, {
-      httpOnly: true,
-      maxAge: refreshTokenExpiry.getTime() - Date.now(),
-    });
-
-    response.accessToken = accessToken;
-    ServiceResponseExtensions.setSuccess(response, 'Đăng nhập thành công!');
+      if (getJwtById.data.expired_date <= Date.now()) {
+        ServiceResponseExtensions.setUnauthorized(
+          response,
+          'Thời gian đã hết hãy đăng nhập lại!',
+        );
+        return response;
+      }
+      const accessExpire = 60 * 60 * 1000;
+      const accessToken = await this.jwtTokenHelper.generateJwtToken(
+        getUserIdFromToken.sub,
+        getUserIdFromToken.role,
+        new Date(Date.now() + accessExpire),
+      );
+      res.cookie('threads_access_token', accessToken, {
+        httpOnly: true,
+        maxAge: accessExpire,
+      });
+      ServiceResponseExtensions.setSuccess(
+        response,
+        'Access token được cấp mới!',
+      );
+    } catch (error) {
+      ServiceResponseExtensions.setError(response, error.message);
+    }
     return response;
   }
 }
