@@ -22,6 +22,9 @@ export class JwtEntity {
   @Column()
   expired_date: Date;
 
+  @Column()
+  userId: number;
+
   @ManyToOne(() => UserEntity, (user) => user.id)
   user: UserEntity;
 
