@@ -7,6 +7,7 @@ import typeormConfig from 'src/Config/typeorm.config';
 import { AuthModule } from 'src/Modules/Auth/auth.module';
 import { RoleModule } from 'src/Modules/Roles/role.module';
 import { JwtModule } from 'src/Modules/Jwt/jwt.module';
+import { UserModule } from 'src/Modules/Users/user.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { JwtModule } from 'src/Modules/Jwt/jwt.module';
       useFactory: async (configService: ConfigService) =>
         configService.get('typeorm'),
     }),
+    UserModule,
     AuthModule,
     JwtModule,
     RoleModule,

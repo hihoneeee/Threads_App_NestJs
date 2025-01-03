@@ -1,14 +1,29 @@
-import { Exclude } from 'class-transformer';
+import { Expose, Transform } from 'class-transformer';
+import { GetRoleDTO } from 'src/Modules/Roles/DTOs/get-role.dto';
 
 export class GetUserDTO {
-  @Exclude({ toPlainOnly: true })
+  @Expose()
   id?: number;
-  @Exclude({ toPlainOnly: true })
+
+  @Expose()
   userName?: string;
-  @Exclude({ toPlainOnly: true })
+
+  @Expose()
   email?: string;
-  @Exclude({ toPlainOnly: true })
+
+  @Expose()
   avatar?: string;
-  @Exclude({ toPlainOnly: true })
+
+  @Expose()
   sex?: string;
+
+  @Expose()
+  @Transform(({ obj }) =>
+    obj.role
+      ? {
+          id: obj.role.id,
+        }
+      : null,
+  )
+  dataRole?: GetRoleDTO;
 }

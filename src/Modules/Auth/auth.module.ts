@@ -17,7 +17,7 @@ import { JwtRepository } from 'src/Modules/Jwt/jwt.repository';
     TypeOrmModule.forFeature([UserEntity, RoleEntity, JwtEntity]),
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_SECRET,
+      secret: process.env.JWT_ACCESS_TOKEN_SECRET,
       signOptions: { expiresIn: '15m' },
     }),
   ],

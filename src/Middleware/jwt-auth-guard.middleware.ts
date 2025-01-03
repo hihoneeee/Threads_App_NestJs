@@ -12,22 +12,24 @@ export class JwtAuthGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
+
     const authHeader = request.headers['authorization'];
 
     if (!authHeader) {
       throw new UnauthorizedException('Authorization header is missing');
     }
 
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.replace('Bearer ', '').trim();
 
     try {
       const payload = this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET,
+        secret: process.env.JWT_ACCESS_TOKEN_SECRET,
       });
       request.userId = payload.sub;
       return true;
     } catch (error) {
-      throw new UnauthorizedException('Invalid or expired token', error);
+      console.error('JWT Verify Error:', error);
+      throw new UnauthorizedException('Invalid or expired token');
     }
   }
 }
