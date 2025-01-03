@@ -83,12 +83,12 @@ export class AuthService implements IAuthService {
       const role = await this.iRoleRepository.getRoleById(existingUser.role.id);
       const accessExpire = 60 * 60 * 1000;
       const refreshExpire = 7 * 24 * 60 * 60 * 1000;
-      const accessToken = await this.jwtTokenHelper.generateJwtToken(
+      const accessToken = await this.jwtTokenHelper.generateJwtAccessToken(
         existingUser.id,
         role.value,
         new Date(Date.now() + accessExpire),
       );
-      const refreshToken = await this.jwtTokenHelper.generateJwtToken(
+      const refreshToken = await this.jwtTokenHelper.generateJwtRefreshToken(
         existingUser.id,
         role.value,
         new Date(Date.now() + refreshExpire),
@@ -105,11 +105,21 @@ export class AuthService implements IAuthService {
       res.cookie('threads_access_token', accessToken, {
         httpOnly: true,
         maxAge: accessExpire,
+        sameSite: 'lax',
+        secure: false,
+        path: '/',
       });
+
       res.cookie('threads_refresh_token', refreshToken, {
         httpOnly: true,
         maxAge: refreshExpire,
+        sameSite: 'lax',
+        secure: false,
+        path: '/',
       });
+      response.accessToken = accessToken;
+      response.refreshToken = refreshToken;
+
       ServiceResponseExtensions.setSuccess(response, 'Đăng nhập thành công!');
     } catch (error) {
       ServiceResponseExtensions.setError(response, error.message);
@@ -123,9 +133,18 @@ export class AuthService implements IAuthService {
   ): Promise<ServiceResponse<any>> {
     const response = new ServiceResponse();
     try {
+      if (!refreshToken || typeof refreshToken !== 'string') {
+        ServiceResponseExtensions.setUnauthorized(
+          response,
+          'Token không hợp lệ!',
+        );
+        return response;
+      }
+      refreshToken = refreshToken.trim();
+
       const checkTokenValid =
-        await this.jwtTokenHelper.isTokenValid(refreshToken);
-      if (checkTokenValid == false) {
+        await this.jwtTokenHelper.isRefreshTokenValid(refreshToken);
+      if (!checkTokenValid) {
         ServiceResponseExtensions.setUnauthorized(
           response,
           'Token không hợp lệ!',
@@ -133,13 +152,21 @@ export class AuthService implements IAuthService {
         return response;
       }
 
-      const getUserIdFromToken =
-        this.jwtTokenHelper.getTokenPayload(refreshToken);
+      const getUserIdFromToken = this.jwtTokenHelper.getTokenPayload(
+        'refresh',
+        refreshToken,
+      );
 
       const getJwtById = await this.iJwtService.getJwtByUserId(
         getUserIdFromToken.sub,
       );
-
+      if (getJwtById.data.value !== refreshToken) {
+        ServiceResponseExtensions.setUnauthorized(
+          response,
+          'Token không hợp lệ',
+        );
+        return response;
+      }
       if (getJwtById.data.expired_date <= Date.now()) {
         ServiceResponseExtensions.setUnauthorized(
           response,
@@ -148,7 +175,7 @@ export class AuthService implements IAuthService {
         return response;
       }
       const accessExpire = 60 * 60 * 1000;
-      const accessToken = await this.jwtTokenHelper.generateJwtToken(
+      const accessToken = await this.jwtTokenHelper.generateJwtAccessToken(
         getUserIdFromToken.sub,
         getUserIdFromToken.role,
         new Date(Date.now() + accessExpire),

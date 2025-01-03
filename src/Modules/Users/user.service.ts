@@ -12,6 +12,7 @@ export class UserService implements IUserService {
     @Inject('IUserRepository')
     private readonly iUserRepository: IUserRepository,
   ) {}
+
   async getCurrentAsync(id: number): Promise<ServiceResponse<GetUserDTO>> {
     const response = new ServiceResponse<GetUserDTO>();
 
@@ -24,7 +25,12 @@ export class UserService implements IUserService {
         );
         return response;
       }
-      response.data = plainToInstance(GetUserDTO, existingUser);
+
+      const userDtoInstance = plainToInstance(GetUserDTO, existingUser, {
+        excludeExtraneousValues: true,
+      });
+
+      response.data = userDtoInstance;
       ServiceResponseExtensions.setSuccess(
         response,
         'Lấy thông tin thành công!',

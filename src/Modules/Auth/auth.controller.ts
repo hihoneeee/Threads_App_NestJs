@@ -46,6 +46,8 @@ export class AuthController {
       return res.status(HttpStatus.OK).json({
         success: serviceResponse.success,
         message: serviceResponse.message,
+        accessToken: serviceResponse.accessToken,
+        refreshToken: serviceResponse.refreshToken,
       });
     } else {
       return res.status(serviceResponse.statusCode).json({
@@ -56,7 +58,8 @@ export class AuthController {
   }
 
   @Post('refresh-token')
-  async refreshToken(@Body() token: string, @Res() res: any) {
+  async refreshToken(@Body() tokenObject: { token: string }, @Res() res: any) {
+    const token = tokenObject.token;
     const serviceResponse = await this.authService.refreshToken(token, res);
 
     if (serviceResponse.statusCode === HttpStatus.OK) {

@@ -13,7 +13,7 @@ import { IUserService } from 'src/Modules/Users/Interfaces/i.user.service';
 @Controller('user')
 export class UserController {
   constructor(
-    @Inject('IUserser') private readonly iUserService: IUserService,
+    @Inject('IUserService') private readonly iUserService: IUserService,
   ) {}
   @Get('current')
   @UseGuards(JwtAuthGuard)
@@ -27,7 +27,7 @@ export class UserController {
       return res.status(HttpStatus.OK).json({
         success: serviceResponse.success,
         message: serviceResponse.message,
-        accessToken: serviceResponse.accessToken,
+        data: serviceResponse.data,
       });
     } else {
       return res.status(serviceResponse.statusCode).json({
